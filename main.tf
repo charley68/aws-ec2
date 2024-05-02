@@ -39,7 +39,7 @@ resource "aws_security_group" "HelloSteveLB-SG" {
     egress {
     from_port   = 0
     to_port     = 0
-    protocol    = "tcp"
+    protocol    = "-1"
     cidr_blocks = ["0.0.0.0/0"]
   }
 }
@@ -67,10 +67,20 @@ resource "aws_security_group" "HelloSteve-DEV-SG" {
     cidr_blocks = ["0.0.0.0/0"]
   }
 
+  
+
   ingress {
     from_port   = 80
     to_port     = 80
     protocol    = "tcp"
+    cidr_blocks = ["0.0.0.0/0"]
+  }
+
+  # needed this initially so we can access internet to run the apache install.  I guess maybe this would usually be in a private subnet and use NAT Gateway ?
+  egress {
+    from_port   = 0
+    to_port     = 0
+    protocol    = "-1"
     cidr_blocks = ["0.0.0.0/0"]
   }
 }
@@ -89,8 +99,7 @@ resource "aws_instance" "steve1" {
   user_data = <<-EOF
   #!/bin/bash
   echo "*** Installing apache2"
-    sudo yum install apache2
-    sudo yum install httpd
+    sudo yum install httpd -y
     sudo systemctl start httpd
     sudo systemctl enable httpd
   EOF
