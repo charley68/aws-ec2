@@ -23,25 +23,37 @@ resource "aws_default_vpc" "default" {
 # Create SG allowing HTTP traffic on port 80 for the LB
 resource "aws_security_group" "HelloSteveLB-SG" {
  
- # In Console you specify a TYPE  (Like HTTP / TCP) but TF you specify the PORT only. I guess type is inferred from ports.
-
   name = "HelloSteveLB-SG"
-  ingress {
-    from_port   = var.ingress_port
-    to_port     = var.ingress_port
-    protocol    = "tcp"
-    cidr_blocks = var.allowed_cidrs
-  }
 
-  # NOT SURE WHY BUT I NEED EGRESS FOR THE LB OTHERWISE I GET 504 ERROR.  DONT NEED IT ON THE EC2 THOUGH
-  # I thoght SG was stateful so if it allows traffic in, it automatically allows traffic out ??
-    egress {
-    from_port   = 0
-    to_port     = 0
-    protocol    = "-1"
-    cidr_blocks = ["0.0.0.0/0"]
-  }
+    dynamic "ingress" {
+        for_each = var.load_balancer_ingress
+        iterator = ingressRule
+
+        content {
+            from_port   = ingressRule.value["from_port"]
+            to_port     = ingressRule.value["to_port"]
+            protocol    = ingressRule.value["protocol"]
+            cidr_blocks = ingressRule.value["cidr_blocks"]
+        }
+    }   
+  
+      dynamic "egress" {
+        for_each = var.load_balancer_egress
+        iterator = egressRule
+
+        content {
+            from_port   = egressRule.value["from_port"]
+            to_port     = egressRule.value["to_port"]
+            protocol    = egressRule.value["protocol"]
+            cidr_blocks = egressRule.value["cidr_blocks"]
+        }
+
 }
+
+
+
+
+
 
 # Create SG allowing HTTP traffic on port 80 from LB only to prevent direct public access to the EC2
 resource "aws_security_group" "HelloSteve-SG" {
