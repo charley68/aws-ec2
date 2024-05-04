@@ -8,3 +8,6 @@ variable "cluster_name" {
     default = "demo-cluster"
     type        = string
 }
+
+variable "ingress_port" {
+}
