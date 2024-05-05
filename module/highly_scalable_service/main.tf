@@ -47,7 +47,7 @@ resource "aws_security_group" "HelloSteveLB-SG" {
             protocol    = egressRule.value["protocol"]
             cidr_blocks = egressRule.value["cidr_blocks"]
         }
-
+   }
 }
 
 
