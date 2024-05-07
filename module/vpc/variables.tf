@@ -5,17 +5,17 @@ variable "region" {
 }
 
 variable "project_name" {
-    default = "myProject"
-    type        = string
+    type = string
 }
 
-variable "load_balancer_ingress" {
-  type = list(object({
-    protocol    = string
-    from_port   = string
-    to_port     = string
-    cidr_blocks = list(string)
-  }))
+variable "environment" {
+    default = "dev"
+    type = string
+}
+
+variable "vpc_cidr" {
+     default = "10.0.0.0/16"
+     type = string
 }
 
 variable "private_subnets" {
@@ -32,3 +32,4 @@ variable "azs" {
     description = "List  of azs"
     type = list(string)
 }
+  

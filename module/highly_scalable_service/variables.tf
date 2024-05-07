@@ -1,8 +1,22 @@
 
+variable "project_name" {
+  type = string
+}
+
+variable "environment" {
+  default = "dev"
+  type = string
+}
+
 variable "region" {
     default = "eu-west-2"
     type        = string
 }
+
+variable "vpc_id" {
+    type        = string
+}
+
 
 variable "cluster_name" {
     default = "demo-cluster"
@@ -35,6 +49,11 @@ variable "script_path" {
 
 variable "loadbalancer_type" {
     default = "application"
+    type = string
+}
+
+variable "loadbalancer_listener_port" {
+    default = "80"
     type = string
 }
 

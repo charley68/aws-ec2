@@ -12,18 +12,21 @@
 #
 
 
-# REPLACE BELOW WITH VPC MODULE
-resource "aws_default_vpc" "default" {
+
+# Create SG allowing HTTP traffic on port 80 for the LB
+
+
+locals {
   tags = {
-    Name = "Default VPC"
+    Project = var.project_name
+    Environment = var.environment
   }
 }
 
-
-# Create SG allowing HTTP traffic on port 80 for the LB
 resource "aws_security_group" "HelloSteveLB-SG" {
  
-  name = "HelloSteveLB-SG"
+  vpc_id = var.vpc_id
+  name = "${var.project_name}-LB-SG"
 
     dynamic "ingress" {
         for_each = var.load_balancer_ingress
@@ -47,18 +50,15 @@ resource "aws_security_group" "HelloSteveLB-SG" {
             protocol    = egressRule.value["protocol"]
             cidr_blocks = egressRule.value["cidr_blocks"]
         }
-
+      }
 }
-
-
-
-
 
 
 # Create SG allowing HTTP traffic on port 80 from LB only to prevent direct public access to the EC2
 resource "aws_security_group" "HelloSteve-SG" {
  
-  name = "HelloSteve-SG"
+  vpc_id = var.vpc_id
+  name = "${var.project_name}-SG"
   ingress {
     from_port   = var.ingress_port
     to_port     = var.ingress_port
@@ -70,15 +70,16 @@ resource "aws_security_group" "HelloSteve-SG" {
 # Create SG allowing SSH for dev access 
 resource "aws_security_group" "HelloSteve-DEV-SG" {
 
-  name = "HelloSteve-DEV-SG"
+  name = "${var.project_name}-DEV-SG"
+  vpc_id = var.vpc_id
+
+
   ingress {
     from_port   = 22
     to_port     = 22
     protocol    = "tcp"
     cidr_blocks = ["0.0.0.0/0"]
   }
-
-  
 
   ingress {
     from_port   = 80
@@ -87,7 +88,6 @@ resource "aws_security_group" "HelloSteve-DEV-SG" {
     cidr_blocks = ["0.0.0.0/0"]
   }
 
-  # needed this initially so we can access internet to run the apache install.  I guess maybe this would usually be in a private subnet and use NAT Gateway ?
   egress {
     from_port   = 0
     to_port     = 0
@@ -99,27 +99,35 @@ resource "aws_security_group" "HelloSteve-DEV-SG" {
 
 # Create the EC2 instance
 resource "aws_instance" "steve1" {
+
+  #for_each = toset(data.aws_subnets.public_subnets.ids)
+  #subnet_id  = each.value
+  #
+  # Missing resource instance key
+  # Because aws_instance.steve1 has "for_each" set, its attributes must be accessed on
+  # specific instances.
+
+  count = length(data.aws_availability_zones.available.names)
+  subnet_id = data.aws_subnets.public_subnets.ids[count.index]
+
   ami           = var.ami_id
   instance_type = var.instance_type
 
-
-  # Despite the hashicrap documentation saying security_groups is ok for default VPC, i had to use vpc_security_group_ids
-  #security_groups = [aws_security_group.HelloSteve-SG.id, aws_security_group.HelloSteve-DEV-SG.id]
   vpc_security_group_ids = [aws_security_group.HelloSteve-SG.id, aws_security_group.HelloSteve-DEV-SG.id]
 
+  associate_public_ip_address = true
   user_data = file(var.script_path)
 
-  tags = {
-    Name = "HelloSteve"
-  }
+  tags = local.tags
 }
 
 # Create a TargetGroup
 resource "aws_lb_target_group" "HelloSteve-TG" {
-  name     = "HelloSteve-TG"
+  name = "${var.project_name}-TG"
   port     = 80
   protocol = "HTTP"
-  vpc_id   = aws_default_vpc.default.id
+  #vpc_id   = aws_default_vpc.default.id
+  vpc_id = var.vpc_id 
 }
 
 # Register our EC2 instance with the Target Group
@@ -127,45 +135,47 @@ resource "aws_lb_target_group_attachment" "HelloSteveTG-reg" {
 
   depends_on = [ aws_instance.steve1 ]
   target_group_arn = aws_lb_target_group.HelloSteve-TG.arn
-  target_id        = aws_instance.steve1.id
+
+    for_each = {
+       for k, v in aws_instance.steve1 :
+       k => v
+  }
+
+  target_id        = each.value.id
 }
 
-# I struggled with this - getting the subnets for my default VPC
-data "aws_subnets" "default" {
+data "aws_availability_zones" "available" {
+  state = "available"
+}
+
+data "aws_subnets" "public_subnets" {
   filter {
     name   = "vpc-id"
-    values = [aws_default_vpc.default.id]
+    values = [var.vpc_id]
+  }
+
+  tags = {
+    Type = "Public"
   }
 }
 
+
 # Create Load Balancer
 resource "aws_lb" "HelloSteve-LB" {
-  name               = "hello-steve-lb"
+  name = "${var.project_name}-LB"
   internal           = false
   load_balancer_type = var.loadbalancer_type
   security_groups    = [aws_security_group.HelloSteveLB-SG.id]
 
-
-  # Docs say this is optional but without it, it complains "ONE OF SUBNET_MAPPING, SUBNETS MUST BE SPECIFIED"
-  subnets            = data.aws_subnets.default.ids
-
-  #enable_deletion_protection = true
-
-  #access_logs {
-  #  bucket  = aws_s3_bucket.lb_logs.id
-  #  prefix  = "test-lb"
-  #  enabled = true
-  #}
-
-  tags = {
-    Environment = "Steve1"
-  }
+  subnets            = data.aws_subnets.public_subnets.ids
+ 
+  tags = local.tags
 }
 
 # We want to foward traffic from HTTP/80 to our TG
 resource "aws_lb_listener" "HelloSteve-LB-Listener" {
   load_balancer_arn = aws_lb.HelloSteve-LB.arn
-  port              = "80"
+  port              = var.loadbalancer_listener_port
   protocol          = "HTTP"
 
   default_action {
@@ -173,7 +183,5 @@ resource "aws_lb_listener" "HelloSteve-LB-Listener" {
     target_group_arn = aws_lb_target_group.HelloSteve-TG.arn
   }
 
-  tags = {
-    Environment = "Steve1"
-  }
+  tags = local.tags
 }
