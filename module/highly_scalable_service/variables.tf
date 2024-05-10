@@ -82,3 +82,36 @@ variable "load_balancer_egress" {
               to_port=0, 
               cidr_blocks = ["0.0.0.0/0"]}]
 }
+
+
+variable "dev_security_rules" {
+  type = list(object({
+    type = string
+    description =  string
+    protocol    = string
+    from_port   = string
+    to_port     = string
+    cidr_block = string
+  }))
+  default = [{ type = "ingress", 
+              description = "Allow SSH to EC2"
+              protocol="tcp", 
+              from_port = 22, 
+              to_port=22, 
+              cidr_block = "0.0.0.0/0"},
+
+              {type = "ingress", 
+              description = "Allow HTTP"
+              protocol="tcp", 
+              from_port = 80, 
+              to_port=80, 
+              cidr_block = "0.0.0.0/0"},
+              
+              {type = "egress", 
+              description = "Allow all traffic out"
+              protocol="-1", 
+              from_port = 0, 
+              to_port=0, 
+              cidr_block = "0.0.0.0/0"}
+              ]
+}

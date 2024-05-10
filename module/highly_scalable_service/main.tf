@@ -28,6 +28,7 @@ resource "aws_security_group" "HelloSteveLB-SG" {
   vpc_id = var.vpc_id
   name = "${var.project_name}-LB-SG"
 
+    # Should i be using dyynamic here or  aws_security_group_rule ??
     dynamic "ingress" {
         for_each = var.load_balancer_ingress
         iterator = ingressRule
@@ -74,7 +75,7 @@ resource "aws_security_group" "HelloSteve-DEV-SG" {
   vpc_id = var.vpc_id
 
 
-  ingress {
+ /* ingress {
     from_port   = 22
     to_port     = 22
     protocol    = "tcp"
@@ -93,19 +94,30 @@ resource "aws_security_group" "HelloSteve-DEV-SG" {
     to_port     = 0
     protocol    = "-1"
     cidr_blocks = ["0.0.0.0/0"]
-  }
+  }*/
 }
 
+# This is another way to add muiltiple SG rules instad of using dnyamic.  Here we can specify ingress or egress
+# as well 
+resource "aws_security_group_rule" "dev_sec_rules" {
+  count = length(var.dev_security_rules)
+  type = var.dev_security_rules[count.index].type
+  from_port         = var.dev_security_rules[count.index].from_port
+  to_port           = var.dev_security_rules[count.index].to_port
+  protocol          = var.dev_security_rules[count.index].protocol
+  cidr_blocks       = [var.dev_security_rules[count.index].cidr_block]
+  description       = var.dev_security_rules[count.index].description
+  security_group_id = aws_security_group.HelloSteve-DEV-SG.id
+}
 
 # Create the EC2 instance
 resource "aws_instance" "steve1" {
 
-  #for_each = toset(data.aws_subnets.public_subnets.ids)
-  #subnet_id  = each.value
+
+  # Below fails on first apply as the AZs arent yet created so apply says 
+  # " The "count" value depends on resource attributes that cannot be determined until apply"
   #
-  # Missing resource instance key
-  # Because aws_instance.steve1 has "for_each" set, its attributes must be accessed on
-  # specific instances.
+  # I could pass in the list of az's here as an input since i have them in my variables.tf ?
 
   count = length(data.aws_availability_zones.available.names)
   subnet_id = data.aws_subnets.public_subnets.ids[count.index]
@@ -136,9 +148,10 @@ resource "aws_lb_target_group_attachment" "HelloSteveTG-reg" {
   depends_on = [ aws_instance.steve1 ]
   target_group_arn = aws_lb_target_group.HelloSteve-TG.arn
 
+    # I understand this but how do i find out what key/values are returned by aws_isntance.steve1? 
+    # i couldnt work out how to debug this to see how it works as cant reference module resources from tf console
     for_each = {
-       for k, v in aws_instance.steve1 :
-       k => v
+       for k, v in aws_instance.steve1 : k => v
   }
 
   target_id        = each.value.id
