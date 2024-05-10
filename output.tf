@@ -4,3 +4,7 @@
 output "lb_name" {
     value = "${module.scaleable.lb_dns_name}"
 }
+
+output "azs" {
+    value = module.scaleable.azs
+}

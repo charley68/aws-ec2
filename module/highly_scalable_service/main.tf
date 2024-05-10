@@ -148,12 +148,22 @@ resource "aws_launch_configuration" "steve1" {
   }
 }
 
+/*
+module.scaleable.aws_autoscaling_group.steve1: Creating...
+╷
+│ Error: waiting for Auto Scaling Group (terraform-20240510101202455000000001) capacity satisfied: scaling activity (06563d87-f45b-15ce-67ad-4047db01a4d7): Failed: Security group sg-0beda05df5d661343 and subnet subnet-08df3395fd6ed277c belong to different networks. Launching EC2 instance failed.
+│ 
+│   with module.scaleable.aws_autoscaling_group.steve1,
+│   on module/highly_scalable_service/main.tf line 152, in resource "aws_autoscaling_group" "steve1":
+│  152: resource "aws_autoscaling_group" "steve1" {
+
+  */
 resource "aws_autoscaling_group" "steve1" {
   min_size             = 1
   max_size             = 3
   desired_capacity     = 1
   launch_configuration = aws_launch_configuration.steve1.name
-  availability_zones  = data.aws_subnets.public_subnets.ids
+  availability_zones  = var.azs
 }
 
 

@@ -13,6 +13,11 @@ variable "region" {
     type        = string
 }
 
+variable "azs" {
+    description = "List  of azs"
+    type = list(string)
+}
+
 variable "vpc_id" {
     type        = string
 }
@@ -115,3 +120,4 @@ variable "dev_security_rules" {
               cidr_block = "0.0.0.0/0"}
               ]
 }
+

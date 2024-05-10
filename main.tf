@@ -22,4 +22,5 @@ module "scaleable" {
   load_balancer_ingress = var.load_balancer_ingress
   vpc_id = module.steve_vpc.vpc_id
   project_name = var.project_name
+  azs = var.azs
 }
