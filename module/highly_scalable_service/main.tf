@@ -109,16 +109,16 @@ resource "aws_security_group_rule" "dev_sec_rules" {
   description       = var.dev_security_rules[count.index].description
   security_group_id = aws_security_group.HelloSteve-DEV-SG.id
 }
-
+/*
 # Create the EC2 instance
 resource "aws_instance" "steve1" {
 
+  # Seems to be two ways to create mutliple resournces
+  # 1) using  count and count.index
+  # 2) using for_each and each.value
 
-  # Below fails on first apply as the AZs arent yet created so apply says 
-  # " The "count" value depends on resource attributes that cannot be determined until apply"
-  #
-  # I could pass in the list of az's here as an input since i have them in my variables.tf ?
-
+  # The "count" value depends on resource attributes that cannot be determined until # apply, so Terraform cannot predict how many instances will be created. To work around # this, use the  -target argument to first apply only the resources that the count 
+  # depends on.
   count = length(data.aws_availability_zones.available.names)
   subnet_id = data.aws_subnets.public_subnets.ids[count.index]
 
@@ -131,22 +131,56 @@ resource "aws_instance" "steve1" {
   user_data = file(var.script_path)
 
   tags = local.tags
+}*/
+
+
+# For ASG, we dont specify the aws_instance but instead specify a aws_launch_configutation
+resource "aws_launch_configuration" "steve1" {
+
+  name_prefix     = "terraform-aws-asg-"
+  image_id        = var.ami_id
+  instance_type   = var.instance_type
+  user_data       = file(var.script_path)
+  security_groups = [aws_security_group.HelloSteve-SG.id, aws_security_group.HelloSteve-DEV-SG.id]
+
+  lifecycle {
+    create_before_destroy = true
+  }
 }
+
+resource "aws_autoscaling_group" "steve1" {
+  min_size             = 1
+  max_size             = 3
+  desired_capacity     = 1
+  launch_configuration = aws_launch_configuration.steve1.name
+  availability_zones  = data.aws_subnets.public_subnets.ids
+}
+
 
 # Create a TargetGroup
 resource "aws_lb_target_group" "HelloSteve-TG" {
   name = "${var.project_name}-TG"
   port     = 80
   protocol = "HTTP"
-  #vpc_id   = aws_default_vpc.default.id
   vpc_id = var.vpc_id 
+
 }
 
-# Register our EC2 instance with the Target Group
+
+# For ASG, we create an aws_autoscaling_attachment.  For EC2 instances, we create aws_lb_target_attachment since we know the EC2s in this case.
+resource "aws_autoscaling_attachment" "steve1" {
+  autoscaling_group_name = aws_autoscaling_group.steve1.id
+  lb_target_group_arn   = aws_lb_target_group.HelloSteve-TG.arn
+}
+
+/*
+# Register our EC2 instance's with the Target Group
 resource "aws_lb_target_group_attachment" "HelloSteveTG-reg" {
 
   depends_on = [ aws_instance.steve1 ]
   target_group_arn = aws_lb_target_group.HelloSteve-TG.arn
+
+
 
     # I understand this but how do i find out what key/values are returned by aws_isntance.steve1? 
     # i couldnt work out how to debug this to see how it works as cant reference module resources from tf console
@@ -159,7 +193,7 @@ resource "aws_lb_target_group_attachment" "HelloSteveTG-reg" {
 
 data "aws_availability_zones" "available" {
   state = "available"
-}
+}*/
 
 data "aws_subnets" "public_subnets" {
   filter {
