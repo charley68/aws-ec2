@@ -2,7 +2,7 @@
 load_balancer_ingress = [{ protocol="tcp", 
               from_port = 80, 
               to_port=80, 
-              cidr_blocks = ["0.0.0.0/1"]}]
+              cidr_blocks = ["0.0.0.0/0"]}]
 
 project_name = "SteveEC2-Project1"
 

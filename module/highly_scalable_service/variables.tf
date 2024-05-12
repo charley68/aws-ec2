@@ -8,6 +8,11 @@ variable "environment" {
   type = string
 }
 
+variable "bucket" {
+  default = "steve-app-bucket"
+  type = string
+}
+
 variable "region" {
     default = "eu-west-2"
     type        = string
