@@ -1,5 +1,12 @@
 terraform {
 
+  backend "s3" {
+    bucket                  = "scl-terraform-s3-state"
+    key                     = "aws-ec2-basic"
+    region                  = "eu-west-2"
+    shared_credentials_file = "~/.aws/credentials"
+  }
+
   required_version = ">= 1.0"
 
   required_providers {
