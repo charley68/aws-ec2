@@ -119,7 +119,8 @@ resource "aws_instance" "steve1" {
   #
   # I could pass in the list of az's here as an input since i have them in my variables.tf ?
 
-  count = length(data.aws_availability_zones.available.names)
+  depends_on = [ data.aws_availability_zones.available ]
+  count =  3 #length(data.aws_availability_zones.available.names)
   subnet_id = data.aws_subnets.public_subnets.ids[count.index]
 
   ami           = var.ami_id
@@ -170,6 +171,15 @@ data "aws_subnets" "public_subnets" {
   tags = {
     Type = "Public"
   }
+}
+
+
+output "az_count" {
+  value = length(data.aws_availability_zones.available.names)
+}
+
+output "az_names" {
+  value = data.aws_availability_zones.available.names
 }
 
 
