@@ -126,3 +126,5 @@ variable "dev_security_rules" {
               ]
 }
 
+variable "public_key_file" {
+}

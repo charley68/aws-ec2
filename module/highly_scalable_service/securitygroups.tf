@@ -41,6 +41,55 @@ resource "aws_security_group" "HelloSteve-SG" {
     protocol    = "tcp"
     security_groups = [aws_security_group.HelloSteveLB-SG.id]
   }
+
+  # needed this as couldnt do updates via nat without it
+  egress {
+    from_port   = 0
+    to_port     = 0
+    protocol    = "-1"
+    cidr_blocks = ["0.0.0.0/0"]
+  }
+
+  tags = local.tags
+}
+
+resource "aws_security_group" "Bastion-SG" {
+  name = "${var.project_name}-Bastion-SG"
+  vpc_id = var.vpc_id
+
+  ingress {
+    from_port   = 22
+    to_port     = 22
+    protocol    = "tcp"
+    cidr_blocks = ["0.0.0.0/0"]
+  }
+
+  egress {
+    from_port   = 0
+    to_port     = 0
+    protocol    = "-1"
+    cidr_blocks = ["0.0.0.0/0"]
+  }
+}
+
+
+resource "aws_security_group" "Bastion-connect-SG" {
+  name = "${var.project_name}-Bastion-Connect-SG"
+  vpc_id = var.vpc_id
+
+  ingress {
+    from_port   = 22
+    to_port     = 22
+    protocol    = "tcp"
+    security_groups = [aws_security_group.Bastion-SG.id]
+  }
+
+  egress {
+    from_port   = 0
+    to_port     = 0
+    protocol    = "-1"
+    security_groups = [aws_security_group.Bastion-SG.id]
+  }
 }
 
 # Create SG allowing SSH for dev access 
@@ -75,6 +124,7 @@ resource "aws_security_group" "HelloSteve-DEV-SG" {
 # This is another way to add muiltiple SG rules instad of using dnyamic.  Here we can specify ingress or egress
 # as well 
 resource "aws_security_group_rule" "dev_sec_rules" {
+
   count = length(var.dev_security_rules)
   type = var.dev_security_rules[count.index].type
   from_port         = var.dev_security_rules[count.index].from_port

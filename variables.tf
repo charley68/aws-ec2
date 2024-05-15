@@ -32,3 +32,7 @@ variable "azs" {
     description = "List  of azs"
     type = list(string)
 }
+
+variable "public_key_file" {
+  default = "./mykey.pub"
+}

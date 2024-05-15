@@ -24,8 +24,10 @@ resource "aws_instance" "steve1" {
   tags = local.tags
 }*/
 
-
-
+resource "aws_key_pair" "TFkeypair" {
+  key_name   = "TFmykeypair"
+  public_key = file(var.public_key_file)
+}
 
 # For ASG, we dont specify the aws_instance but instead specify a aws_launch_configutation
 resource "aws_launch_configuration" "steve1" {
@@ -35,8 +37,11 @@ resource "aws_launch_configuration" "steve1" {
   instance_type   = var.instance_type
   user_data       = file(var.script_path)
   iam_instance_profile = aws_iam_instance_profile.steve_profile.name
-  security_groups = [aws_security_group.HelloSteve-SG.id, aws_security_group.HelloSteve-DEV-SG.id]
-  associate_public_ip_address = true
+  security_groups = [aws_security_group.HelloSteve-SG.id, aws_security_group.Bastion-connect-SG.id]
+  #associate_public_ip_address = true
+  key_name = aws_key_pair.TFkeypair.key_name
+
+  # Whats the reason for this ??
   lifecycle {
     create_before_destroy = true
   }

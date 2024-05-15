@@ -23,4 +23,5 @@ module "scaleable" {
   vpc_id = module.steve_vpc.vpc_id
   project_name = var.project_name
   azs = var.azs
+  public_key_file = var.public_key_file
 }
